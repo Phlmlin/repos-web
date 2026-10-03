@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { EstablishmentWithPrices, Review } from "@/lib/repos";
 
 const EST_SELECT =
-  "id,name,type,city,address,lat,lng,description,stars,amenities,photos";
+  "id,name,type,city,address,lat,lng,description,stars,amenities,photos,is_active";
 
 export async function getEstablishments(): Promise<EstablishmentWithPrices[]> {
   const supabase = await createClient();

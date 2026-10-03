@@ -19,6 +19,7 @@ export interface Establishment {
   stars: number | null;
   amenities: string[];
   photos: string[];
+  is_active: boolean;
 }
 
 export interface EstablishmentWithPrices extends Establishment {
