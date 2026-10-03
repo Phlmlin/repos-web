@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Fond papier chaud */
+  --color-paper: #faf6ed;
+  --color-cream: #f3ecdc;
+  /* Encre */
+  --color-ink: #1a2220;
+  --color-ink-soft: #4a5751;
+  --color-ink-faint: #7d8a83;
+  /* Vert pin — couleur primaire */
+  --color-pine-950: #0d271d;
+  --color-pine-900: #123524;
+  --color-pine-800: #17452f;
+  --color-pine-700: #1e5b3f;
+  --color-pine-600: #267049;
+  --color-pine-100: #dce9df;
+  --color-pine-50: #eef4ef;
+  /* Or — accent */
+  --color-gold-700: #96660f;
+  --color-gold-600: #b97f1f;
+  --color-gold-500: #d29a2b;
+  --color-gold-100: #f5e8c8;
+  /* Terracotta — surlignage */
+  --color-clay-600: #b4502f;
+  --color-clay-500: #c65f3a;
+  /* Ligne */
+  --color-line: #e3d8c1;
+
+  --radius-xl2: 1.25rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-gold-100);
+  color: var(--color-pine-950);
+}
+
+/* Anneau de focus visible et élégant */
+:focus-visible {
+  outline: 2px solid var(--color-pine-600);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
