@@ -15,6 +15,31 @@ const ROLE_HOME: Record<string, { href: string; label: string; Icon: typeof Tick
   admin: { href: "/admin", label: "Administration", Icon: ShieldCheck },
 };
 
+// Navigation centrale adaptée au rôle : quand on est connecté,
+// les liens marketing disparaissent au profit de liens utiles.
+// (Le bouton d'espace à droite reste le point d'entrée principal,
+// visible aussi sur mobile où cette nav est masquée.)
+function RoleNav({ role }: { role: string }) {
+  if (role === "client") {
+    return (
+      <nav className="hidden items-center gap-8 text-sm font-medium text-ink-soft md:flex">
+        <Link href="/catalogue" className="transition hover:text-pine-800">
+          Établissements
+        </Link>
+      </nav>
+    );
+  }
+  // Tenancier & admin : un simple accès au site public,
+  // la navigation détaillée vit dans leur tableau de bord.
+  return (
+    <nav className="hidden items-center gap-8 text-sm font-medium text-ink-soft md:flex">
+      <Link href="/catalogue" className="transition hover:text-pine-800">
+        Voir le site
+      </Link>
+    </nav>
+  );
+}
+
 export async function SiteHeader() {
   const supabase = await createClient();
   const {
@@ -43,17 +68,21 @@ export async function SiteHeader() {
             Repos
           </span>
         </Link>
-        <nav className="hidden items-center gap-8 text-sm font-medium text-ink-soft md:flex">
-          <Link href="/catalogue" className="transition hover:text-pine-800">
-            Établissements
-          </Link>
-          <Link href="/#comment-ca-marche" className="transition hover:text-pine-800">
-            Comment ça marche
-          </Link>
-          <Link href="/#tenanciers" className="transition hover:text-pine-800">
-            Tenanciers
-          </Link>
-        </nav>
+        {user ? (
+          <RoleNav role={role} />
+        ) : (
+          <nav className="hidden items-center gap-8 text-sm font-medium text-ink-soft md:flex">
+            <Link href="/catalogue" className="transition hover:text-pine-800">
+              Établissements
+            </Link>
+            <Link href="/#comment-ca-marche" className="transition hover:text-pine-800">
+              Comment ça marche
+            </Link>
+            <Link href="/#tenanciers" className="transition hover:text-pine-800">
+              Tenanciers
+            </Link>
+          </nav>
+        )}
         <div className="flex items-center gap-2 sm:gap-3">
           {!user ? (
             <>
