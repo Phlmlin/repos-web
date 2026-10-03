@@ -10,21 +10,31 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { requireAdmin } from "@/lib/auth/roles";
 import { SLOT_LABELS, formatPrice, type SlotType } from "@/lib/repos";
+import { RoleSelect } from "./role-select";
 
 export default async function AdminPage() {
   const ctx = await requireAdmin();
   const sb = ctx.supabase;
 
-  const [{ count: users }, { count: establishments }, { data: bookings }] =
-    await Promise.all([
-      sb.from("profiles").select("id", { count: "exact", head: true }),
-      sb.from("establishments").select("id", { count: "exact", head: true }),
-      sb
-        .from("bookings")
-        .select("id,code,day,slot_type,total_fcfa,status,establishments(name)")
-        .order("created_at", { ascending: false })
-        .limit(15),
-    ]);
+  const [
+    { count: users },
+    { count: establishments },
+    { data: bookings },
+    { data: members },
+  ] = await Promise.all([
+    sb.from("profiles").select("id", { count: "exact", head: true }),
+    sb.from("establishments").select("id", { count: "exact", head: true }),
+    sb
+      .from("bookings")
+      .select("id,code,day,slot_type,total_fcfa,status,establishments(name)")
+      .order("created_at", { ascending: false })
+      .limit(15),
+    sb
+      .from("profiles")
+      .select("id,full_name,role,created_at")
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
   const revenue = ((await sb
     .from("bookings")
@@ -69,6 +79,44 @@ export default async function AdminPage() {
         </div>
 
         <h2 className="mt-10 flex items-center gap-2 font-display text-2xl font-semibold text-pine-950">
+          <Users className="size-5 text-pine-700" />
+          Utilisateurs & rôles
+        </h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Changez le rôle d'un membre depuis la liste — effet immédiat à sa
+          prochaine connexion.
+        </p>
+        <div className="mt-5 overflow-hidden rounded-3xl border border-line bg-white">
+          {((members ?? []) as Array<Record<string, unknown>>).map((m, i) => (
+            <div
+              key={String(m.id)}
+              className={`flex flex-wrap items-center justify-between gap-3 px-6 py-4 ${
+                i > 0 ? "border-t border-line" : ""
+              }`}
+            >
+              <div>
+                <p className="font-semibold text-ink">
+                  {String(m.full_name ?? "—")}
+                </p>
+                <p className="text-sm text-ink-soft">
+                  Membre depuis le{" "}
+                  {new Date(String(m.created_at)).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+              <RoleSelect
+                userId={String(m.id)}
+                currentRole={String(m.role)}
+                disabled={String(m.id) === ctx.userId}
+              />
+            </div>
+          ))}
+        </div>
+
+        <h2 className="mt-10 flex items-center gap-2 font-display text-2xl font-semibold text-pine-950">
           <CalendarDays className="size-5 text-pine-700" />
           Dernières réservations
         </h2>
@@ -107,8 +155,8 @@ export default async function AdminPage() {
         </div>
 
         <p className="mt-8 text-sm text-ink-soft">
-          Gestion avancée (modération des avis, retraits tenanciers, rôles) :
-          via le dashboard Supabase en attendant la prochaine itération.
+          Gestion avancée (modération des avis, retraits tenanciers) : via le
+          dashboard Supabase en attendant la prochaine itération.
         </p>
         <Link
           href="/compte"
