@@ -9,6 +9,33 @@ export interface AuthContext {
   role: string;
 }
 
+type SupaClient = Awaited<ReturnType<typeof createClient>>;
+type AuthUser = { id: string; email?: string | null; user_metadata?: Record<string, unknown> };
+
+/**
+ * Filet de sécurité : si l'inscription n'a pas créé le profil applicatif
+ * (ex. confirmation email active sans trigger SQL), on le crée à la
+ * première visite à partir des métadonnées d'inscription (nom + rôle choisis).
+ */
+export async function ensureProfile(supa: SupaClient, user: AuthUser): Promise<void> {
+  const { data: existing } = await supa
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (existing) return;
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const role = meta["role"] === "tenancier" ? "tenancier" : "client";
+  const rawName = typeof meta["full_name"] === "string" ? meta["full_name"].trim() : "";
+  const fullName = rawName || (user.email ?? "").split("@")[0] || null;
+  await supa.from("profiles").insert({
+    id: user.id,
+    full_name: fullName,
+    role,
+    referral_code: "REPOS-" + user.id.slice(0, 8).toUpperCase(),
+  });
+}
+
 export async function requireUser(): Promise<AuthContext> {
   const supabase = await createClient();
   const {
@@ -16,11 +43,20 @@ export async function requireUser(): Promise<AuthContext> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("full_name,role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (!profile) {
+    await ensureProfile(supabase, user);
+    ({ data: profile } = await supabase
+      .from("profiles")
+      .select("full_name,role")
+      .eq("id", user.id)
+      .maybeSingle());
+  }
 
   return {
     supabase,

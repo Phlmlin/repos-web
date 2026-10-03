@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarDays, MapPin, Ticket, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { ensureProfile } from "@/lib/auth/roles";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { SLOT_LABELS, formatPrice, type SlotType } from "@/lib/repos";
 import { CancelButton } from "./cancel-button";
@@ -30,11 +31,20 @@ export default async function ComptePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("full_name, role, loyalty_points, referral_code")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (!profile) {
+    await ensureProfile(supabase, user);
+    ({ data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, role, loyalty_points, referral_code")
+      .eq("id", user.id)
+      .maybeSingle());
+  }
 
   const { data: bookings } = await supabase
     .from("bookings")
