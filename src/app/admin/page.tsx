@@ -26,6 +26,23 @@ import {
 } from "./moderation-buttons";
 
 export default async function AdminPage() {
+  try {
+    return await AdminContent();
+  } catch (e) {
+    return (
+      <div className="mx-auto max-w-2xl p-10">
+        <h1 className="font-display text-2xl font-semibold text-clay-600">
+          Diagnostic admin
+        </h1>
+        <pre className="mt-4 overflow-auto rounded-2xl bg-pine-950 p-6 text-xs text-paper">
+          {String(e instanceof Error ? e.stack ?? e.message : e)}
+        </pre>
+      </div>
+    );
+  }
+}
+
+async function AdminContent() {
   const ctx = await requireAdmin();
   const sb = ctx.supabase;
 
