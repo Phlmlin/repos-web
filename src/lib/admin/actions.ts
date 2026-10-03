@@ -52,3 +52,48 @@ export async function updateUserRole(
   revalidatePath("/admin");
   return { ok: true };
 }
+
+/** Valide (ou masque) un établissement. */
+export async function setEstablishmentActive(
+  _prev: AdminResult,
+  formData: FormData,
+): Promise<AdminResult> {
+  const ctx = await requireAdmin();
+  const id = String(formData.get("establishment_id") ?? "");
+  const active = formData.get("is_active") === "true";
+  if (!id) return { ok: false, error: "Établissement introuvable." };
+
+  const { error } = await ctx.supabase
+    .from("establishments")
+    .update({ is_active: active })
+    .eq("id", id);
+  if (error) return { ok: false, error: "Mise à jour impossible." };
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+/** Modère un avis signalé : le réhabiliter ou le supprimer. */
+export async function resolveFlaggedReview(
+  _prev: AdminResult,
+  formData: FormData,
+): Promise<AdminResult> {
+  const ctx = await requireAdmin();
+  const id = String(formData.get("review_id") ?? "");
+  const action = String(formData.get("mod_action") ?? "");
+  if (!id) return { ok: false, error: "Avis introuvable." };
+
+  if (action === "unflag") {
+    const { error } = await ctx.supabase
+      .from("reviews")
+      .update({ is_flagged: false })
+      .eq("id", id);
+    if (error) return { ok: false, error: "Mise à jour impossible." };
+  } else if (action === "delete") {
+    const { error } = await ctx.supabase.from("reviews").delete().eq("id", id);
+    if (error) return { ok: false, error: "Suppression impossible." };
+  } else {
+    return { ok: false, error: "Action invalide." };
+  }
+  revalidatePath("/admin");
+  return { ok: true };
+}

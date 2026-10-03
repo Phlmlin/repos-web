@@ -2,6 +2,9 @@ import Link from "next/link";
 import {
   BedDouble,
   CalendarDays,
+  Flag,
+  Inbox,
+  PieChart,
   ShieldCheck,
   Users,
   Wallet,
@@ -9,8 +12,18 @@ import {
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { requireAdmin } from "@/lib/auth/roles";
-import { SLOT_LABELS, formatPrice, type SlotType } from "@/lib/repos";
+import {
+  SLOT_LABELS,
+  TYPE_LABELS,
+  formatPrice,
+  type EstablishmentType,
+  type SlotType,
+} from "@/lib/repos";
 import { RoleSelect } from "./role-select";
+import {
+  FlaggedReviewButtons,
+  ValidateEstablishmentButton,
+} from "./moderation-buttons";
 
 export default async function AdminPage() {
   const ctx = await requireAdmin();
@@ -21,6 +34,11 @@ export default async function AdminPage() {
     { count: establishments },
     { data: bookings },
     { data: members },
+    { data: pendingEsts },
+    { data: flagged },
+    { data: allEsts },
+    { count: pendingBookings },
+    { count: bookingsCount },
   ] = await Promise.all([
     sb.from("profiles").select("id", { count: "exact", head: true }),
     sb.from("establishments").select("id", { count: "exact", head: true }),
@@ -28,29 +46,50 @@ export default async function AdminPage() {
       .from("bookings")
       .select("id,code,day,slot_type,total_fcfa,status,establishments(name)")
       .order("created_at", { ascending: false })
-      .limit(15),
+      .limit(10),
     sb
       .from("profiles")
       .select("id,full_name,role,created_at")
       .order("created_at", { ascending: false })
       .limit(50),
+    sb
+      .from("establishments")
+      .select("id,name,type,city,is_active,created_at")
+      .eq("is_active", false)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    sb
+      .from("reviews")
+      .select("id,rating,title,comment,created_at,establishments(name)")
+      .eq("is_flagged", true)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    sb.from("establishments").select("type"),
+    sb
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+    sb.from("bookings").select("id", { count: "exact", head: true }),
   ]);
 
-  const revenue = ((await sb
-    .from("bookings")
-    .select("total_fcfa")
-    .in("status", ["confirmed", "completed"])) as {
-    data: Array<{ total_fcfa: number }> | null;
-  }).data?.reduce((s, b) => s + b.total_fcfa, 0);
+  const revenue = (
+    (await sb.from("bookings").select("total_fcfa").in("status", [
+      "confirmed",
+      "completed",
+    ])) as { data: Array<{ total_fcfa: number }> | null }
+  ).data?.reduce((s, b) => s + b.total_fcfa, 0);
+
+  const typeCounts = new Map<EstablishmentType, number>();
+  for (const e of (allEsts ?? []) as Array<{ type: EstablishmentType }>) {
+    typeCounts.set(e.type, (typeCounts.get(e.type) ?? 0) + 1);
+  }
+  const totalEsts = [...typeCounts.values()].reduce((s, n) => s + n, 0);
 
   const cards = [
-    { Icon: Users, label: "Utilisateurs", value: String(users ?? 0) },
+    { Icon: Wallet, label: "Chiffre d'affaires", value: formatPrice(revenue ?? 0) },
+    { Icon: CalendarDays, label: "Réservations", value: String(bookingsCount ?? 0) },
     { Icon: BedDouble, label: "Établissements", value: String(establishments ?? 0) },
-    {
-      Icon: Wallet,
-      label: "Revenus plateforme",
-      value: formatPrice(revenue ?? 0),
-    },
+    { Icon: Users, label: "Utilisateurs", value: String(users ?? 0) },
   ];
 
   return (
@@ -61,10 +100,13 @@ export default async function AdminPage() {
           <ShieldCheck className="size-4" /> Administration
         </p>
         <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-pine-950">
-          Vue d'ensemble
+          Pilotage de la plateforme
         </h1>
+        <p className="mt-2 text-[15px] text-ink-soft">
+          Vue globale des opérations, validations et règles commerciales.
+        </p>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {cards.map(({ Icon, label, value }) => (
             <div key={label} className="rounded-3xl border border-line bg-white p-6">
               <span className="grid size-10 place-items-center rounded-2xl bg-pine-50 text-pine-700">
@@ -78,6 +120,132 @@ export default async function AdminPage() {
           ))}
         </div>
 
+        {/* À traiter */}
+        <h2 className="mt-10 flex items-center gap-2 font-display text-2xl font-semibold text-pine-950">
+          <Inbox className="size-5 text-pine-700" />
+          À traiter
+        </h2>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className="rounded-3xl border border-line bg-white p-6">
+            <p className="font-display text-3xl font-semibold text-pine-950">
+              {(pendingEsts ?? []).length}
+            </p>
+            <p className="mt-1 text-sm font-medium text-ink">
+              Établissements en validation
+            </p>
+            {(pendingEsts ?? []).length > 0 && (
+              <ul className="mt-4 space-y-3">
+                {((pendingEsts ?? []) as Array<Record<string, unknown>>).map(
+                  (e) => (
+                    <li
+                      key={String(e.id)}
+                      className="flex items-center justify-between gap-2 border-t border-line pt-3 text-sm"
+                    >
+                      <span className="font-medium text-ink">
+                        {String(e.name)}
+                        <span className="block text-xs font-normal text-ink-faint">
+                          {TYPE_LABELS[String(e.type) as EstablishmentType]} ·{" "}
+                          {String(e.city)}
+                        </span>
+                      </span>
+                      <ValidateEstablishmentButton
+                        establishmentId={String(e.id)}
+                        active={false}
+                      />
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+          </div>
+          <div className="rounded-3xl border border-line bg-white p-6">
+            <p className="font-display text-3xl font-semibold text-pine-950">
+              {(flagged ?? []).length}
+            </p>
+            <p className="mt-1 text-sm font-medium text-ink">Avis signalés</p>
+            {(flagged ?? []).length > 0 && (
+              <ul className="mt-4 space-y-4">
+                {((flagged ?? []) as Array<Record<string, unknown>>).map(
+                  (r) => {
+                    const est = r.establishments as unknown as {
+                      name: string;
+                    } | null;
+                    return (
+                      <li key={String(r.id)} className="border-t border-line pt-3">
+                        <p className="text-sm font-medium text-ink">
+                          {String(r.title ?? "Sans titre")}{" "}
+                          <span className="text-xs font-normal text-ink-faint">
+                            · {est?.name} · {String(r.rating)}/5
+                          </span>
+                        </p>
+                        {!!r.comment && (
+                          <p className="mt-1 line-clamp-2 text-xs text-ink-soft">
+                            {String(r.comment)}
+                          </p>
+                        )}
+                        <div className="mt-2">
+                          <FlaggedReviewButtons reviewId={String(r.id)} />
+                        </div>
+                      </li>
+                    );
+                  },
+                )}
+              </ul>
+            )}
+          </div>
+          <div className="rounded-3xl border border-line bg-white p-6">
+            <p className="font-display text-3xl font-semibold text-pine-950">
+              {pendingBookings ?? 0}
+            </p>
+            <p className="mt-1 text-sm font-medium text-ink">
+              Réservations en attente
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-ink-soft">
+              Les tenanciers confirment leurs réservations depuis leur tableau
+              de bord. Relancez ceux qui tardent à répondre.
+            </p>
+          </div>
+        </div>
+
+        {/* Répartition */}
+        {totalEsts > 0 && (
+          <>
+            <h2 className="mt-10 flex items-center gap-2 font-display text-2xl font-semibold text-pine-950">
+              <PieChart className="size-5 text-pine-700" />
+              Répartition des établissements
+            </h2>
+            <div className="mt-5 rounded-3xl border border-line bg-white p-6 sm:p-8">
+              <div className="space-y-4">
+                {(
+                  Object.keys(TYPE_LABELS) as EstablishmentType[]
+                ).map((t) => {
+                  const n = typeCounts.get(t) ?? 0;
+                  const pct = Math.round((n / totalEsts) * 100);
+                  return (
+                    <div key={t}>
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-ink">
+                          {TYPE_LABELS[t]}
+                        </span>
+                        <span className="text-ink-soft">
+                          {n} · {pct} %
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-paper">
+                        <div
+                          className="h-full rounded-full bg-pine-700"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Utilisateurs & rôles */}
         <h2 className="mt-10 flex items-center gap-2 font-display text-2xl font-semibold text-pine-950">
           <Users className="size-5 text-pine-700" />
           Utilisateurs & rôles
@@ -116,6 +284,7 @@ export default async function AdminPage() {
           ))}
         </div>
 
+        {/* Dernières réservations */}
         <h2 className="mt-10 flex items-center gap-2 font-display text-2xl font-semibold text-pine-950">
           <CalendarDays className="size-5 text-pine-700" />
           Dernières réservations
@@ -154,9 +323,10 @@ export default async function AdminPage() {
           })}
         </div>
 
-        <p className="mt-8 text-sm text-ink-soft">
-          Gestion avancée (modération des avis, retraits tenanciers) : via le
-          dashboard Supabase en attendant la prochaine itération.
+        <p className="mt-8 flex items-center gap-2 text-sm text-ink-soft">
+          <Flag className="size-4 text-pine-700" />
+          Modération avancée et retraits tenanciers : via le dashboard Supabase
+          en attendant la prochaine itération.
         </p>
         <Link
           href="/compte"

@@ -195,3 +195,31 @@ export async function updateBookingStatus(
   if (error) return { ok: false, error: "Mise à jour impossible." };
   return { ok: true };
 }
+
+/** Réponse du tenancier à un avis client. */
+export async function replyToReview(
+  _prev: TenancierResult,
+  formData: FormData,
+): Promise<TenancierResult> {
+  const ctx = await requireTenancier();
+  const reviewId = String(formData.get("review_id") ?? "");
+  const reply = String(formData.get("reply") ?? "").trim();
+  if (!reviewId) return { ok: false, error: "Avis introuvable." };
+  if (reply.length < 2) return { ok: false, error: "Réponse trop courte." };
+
+  const { data: review } = await ctx.supabase
+    .from("reviews")
+    .select("id,establishment_id")
+    .eq("id", reviewId)
+    .single();
+  if (!review) return { ok: false, error: "Avis introuvable." };
+  if (!(await ownedEstablishmentId(ctx, review.establishment_id)))
+    return { ok: false, error: "Accès refusé." };
+
+  const { error } = await ctx.supabase
+    .from("reviews")
+    .update({ owner_reply: reply })
+    .eq("id", reviewId);
+  if (error) return { ok: false, error: "Envoi impossible." };
+  return { ok: true };
+}

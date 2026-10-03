@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, CalendarDays, LayoutDashboard } from "lucide-react";
+import { Building2, CalendarDays, LayoutDashboard, Star } from "lucide-react";
 
 const NAV = [
   { href: "/tableau-de-bord", label: "Vue d'ensemble", Icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const NAV = [
     label: "Réservations",
     Icon: CalendarDays,
   },
+  { href: "/tableau-de-bord/avis", label: "Avis", Icon: Star },
   {
     href: "/tableau-de-bord/etablissement",
     label: "Mon établissement",

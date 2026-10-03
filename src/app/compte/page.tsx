@@ -40,7 +40,9 @@ export default async function ComptePage() {
 
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("id,code,day,slot_type,total_fcfa,status,establishments(name,city,photos)")
+    .select(
+      "id,code,day,slot_type,total_fcfa,payment_method,status,extras,establishment_id,establishments(name,city,photos)",
+    )
     .eq("client_id", user.id)
     .order("day", { ascending: false })
     .limit(20);
@@ -176,8 +178,18 @@ type Booking = {
   day: string;
   slot_type: string;
   total_fcfa: number;
+  payment_method: string;
   status: string;
+  extras: unknown;
+  establishment_id: string;
   establishments: unknown;
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  airtel: "Airtel Money",
+  moov: "Moov Money",
+  carte: "Carte bancaire",
+  sur_place: "Sur place",
 };
 
 function BookingCard({
@@ -198,6 +210,7 @@ function BookingCard({
     month: "short",
     year: "numeric",
   });
+  const extras = (b.extras ?? {}) as { arrival_time?: string | null };
   return (
     <article className="flex gap-4 rounded-3xl border border-line bg-white p-4">
       {est?.photos?.[0] ? (
@@ -217,7 +230,7 @@ function BookingCard({
             <p className="truncate font-display text-lg font-semibold text-pine-950">
               {est?.name ?? "Établissement"}
             </p>
-            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-ink-soft">
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-ink-soft">
               <MapPin className="size-3.5 shrink-0 text-ink-faint" />
               {est?.city}
               <span className="text-ink-faint">·</span>
@@ -225,6 +238,15 @@ function BookingCard({
               <span className="capitalize">{frDay}</span>
               <span className="text-ink-faint">·</span>
               {SLOT_LABELS[b.slot_type as SlotType]}
+              {extras.arrival_time && (
+                <>
+                  <span className="text-ink-faint">·</span>
+                  <span>dès {extras.arrival_time}</span>
+                </>
+              )}
+            </p>
+            <p className="mt-1 text-xs text-ink-faint">
+              {PAYMENT_LABELS[b.payment_method] ?? b.payment_method}
             </p>
           </div>
           <span
@@ -233,7 +255,7 @@ function BookingCard({
             {STATUS_LABELS[b.status] ?? b.status}
           </span>
         </div>
-        <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
           <p className="text-sm text-ink-soft">
             <span className="font-mono font-semibold text-ink">{b.code}</span>
             <span className="mx-2 text-ink-faint">·</span>
@@ -241,16 +263,26 @@ function BookingCard({
               {formatPrice(b.total_fcfa)}
             </span>
           </p>
-          {cancellable ? (
-            <CancelButton bookingId={b.id} />
-          ) : (
-            <Link
-              href={`/reservation/${b.code}`}
-              className="text-sm font-medium text-pine-700 hover:text-pine-900"
-            >
-              Détails
-            </Link>
-          )}
+          <div className="flex items-center gap-4">
+            {!cancellable && b.establishment_id && (
+              <Link
+                href={`/reserver/${b.establishment_id}`}
+                className="text-sm font-medium text-pine-700 hover:text-pine-900"
+              >
+                Re-réserver
+              </Link>
+            )}
+            {cancellable ? (
+              <CancelButton bookingId={b.id} />
+            ) : (
+              <Link
+                href={`/reservation/${b.code}`}
+                className="text-sm font-medium text-pine-700 hover:text-pine-900"
+              >
+                Détails
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </article>
