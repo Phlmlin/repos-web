@@ -46,27 +46,81 @@ export default async function ReservationPage({
   const { code } = await params;
   const supabase = await createClient();
 
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select(
-      "code,day,slot_type,total_fcfa,payment_method,status,extras,establishments(name,city,address,photos)",
-    )
-    .eq("code", code)
-    .single();
-
-  if (!booking) notFound();
-
-  const est = booking.establishments as unknown as {
-    name: string;
-    city: string;
-    address: string | null;
-    photos: string[];
+  // Voie privilégiée : fonction sécurisée booking_by_code() (post-durcissement
+  // RLS). Repli : lecture directe (politiques démo encore actives).
+  type BookingView = {
+    code: string;
+    day: string;
+    slot_type: string;
+    total_fcfa: number;
+    payment_method: string;
+    status: string;
+    guest_name: string | null;
+    arrival_time: string | null;
+    est_name: string;
+    est_city: string;
+    est_address: string | null;
+    est_photos: string[];
   };
-  const extras = (booking.extras ?? {}) as {
-    guest_name?: string;
-    arrival_time?: string | null;
-  };
-  const frDay = new Date(`${booking.day}T12:00:00`).toLocaleDateString(
+  let view: BookingView | null = null;
+
+  const { data: rpcData } = await supabase.rpc("booking_by_code", {
+    p_code: code,
+  });
+  const rpcRow = (rpcData as Array<Record<string, unknown>> | null)?.[0];
+  if (rpcRow) {
+    view = {
+      code: String(rpcRow.code),
+      day: String(rpcRow.day),
+      slot_type: String(rpcRow.slot_type),
+      total_fcfa: Number(rpcRow.total_fcfa),
+      payment_method: String(rpcRow.payment_method),
+      status: String(rpcRow.status),
+      guest_name: (rpcRow.guest_name as string) ?? null,
+      arrival_time: (rpcRow.arrival_time as string) ?? null,
+      est_name: String(rpcRow.est_name),
+      est_city: String(rpcRow.est_city),
+      est_address: (rpcRow.est_address as string) ?? null,
+      est_photos: (rpcRow.est_photos as string[]) ?? [],
+    };
+  } else {
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select(
+        "code,day,slot_type,total_fcfa,payment_method,status,extras,establishments(name,city,address,photos)",
+      )
+      .eq("code", code)
+      .single();
+    if (booking) {
+      const est = booking.establishments as unknown as {
+        name: string;
+        city: string;
+        address: string | null;
+        photos: string[];
+      };
+      const extras = (booking.extras ?? {}) as {
+        guest_name?: string;
+        arrival_time?: string | null;
+      };
+      view = {
+        code: booking.code,
+        day: booking.day,
+        slot_type: booking.slot_type,
+        total_fcfa: booking.total_fcfa,
+        payment_method: booking.payment_method,
+        status: booking.status,
+        guest_name: extras.guest_name ?? null,
+        arrival_time: extras.arrival_time ?? null,
+        est_name: est.name,
+        est_city: est.city,
+        est_address: est.address,
+        est_photos: est.photos ?? [],
+      };
+    }
+  }
+
+  if (!view) notFound();
+  const frDay = new Date(`${view.day}T12:00:00`).toLocaleDateString(
     "fr-FR",
     { weekday: "long", day: "numeric", month: "long", year: "numeric" },
   );
@@ -84,7 +138,7 @@ export default async function ReservationPage({
           </h1>
           <p className="mt-3 text-[15px] text-ink-soft">
             Présentez ce code à votre arrivée.{" "}
-            {STATUS_LABELS[booking.status] ?? booking.status}.
+            {STATUS_LABELS[view.status] ?? view.status}.
           </p>
         </div>
 
@@ -93,7 +147,7 @@ export default async function ReservationPage({
             <Ticket className="size-4" /> Code de réservation
           </p>
           <p className="mt-3 font-display text-4xl font-semibold tracking-wider text-pine-950 sm:text-5xl">
-            {booking.code}
+            {view.code}
           </p>
           <p className="mt-2 text-sm text-ink-soft">
             Conservez-le précieusement — il fait office de justificatif.
@@ -101,11 +155,11 @@ export default async function ReservationPage({
         </div>
 
         <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-white">
-          {est.photos[0] && (
+          {view.est_photos[0] && (
             <div className="relative aspect-[21/9]">
               <Image
-                src={est.photos[0]}
-                alt={est.name}
+                src={view.est_photos[0]}
+                alt={view.est_name}
                 fill
                 sizes="(max-width: 768px) 100vw, 768px"
                 className="object-cover"
@@ -118,12 +172,12 @@ export default async function ReservationPage({
                 Établissement
               </dt>
               <dd className="mt-1 font-display text-xl font-semibold text-pine-950">
-                {est.name}
+                {view.est_name}
               </dd>
               <dd className="mt-0.5 flex items-center gap-1.5 text-sm text-ink-soft">
                 <MapPin className="size-3.5 text-ink-faint" />
-                {est.city}
-                {est.address ? ` — ${est.address}` : ""}
+                {view.est_city}
+                {view.est_address ? ` — ${view.est_address}` : ""}
               </dd>
             </div>
             <div className="grid grid-cols-2 gap-4 border-t border-line pt-4">
@@ -140,9 +194,9 @@ export default async function ReservationPage({
                   <Clock className="size-3.5" /> Créneau
                 </dt>
                 <dd className="mt-1 text-sm font-semibold text-ink">
-                  {SLOT_LABELS[booking.slot_type as SlotType]}
-                  {extras.arrival_time
-                    ? ` · arrivée ${extras.arrival_time}`
+                  {SLOT_LABELS[view.slot_type as SlotType]}
+                  {view.arrival_time
+                    ? ` · arrivée ${view.arrival_time}`
                     : ""}
                 </dd>
               </div>
@@ -151,8 +205,8 @@ export default async function ReservationPage({
                   Paiement
                 </dt>
                 <dd className="mt-1 text-sm font-semibold text-ink">
-                  {PAYMENT_LABELS[booking.payment_method] ??
-                    booking.payment_method}
+                  {PAYMENT_LABELS[view.payment_method] ??
+                    view.payment_method}
                 </dd>
               </div>
               <div>
@@ -160,7 +214,7 @@ export default async function ReservationPage({
                   Total
                 </dt>
                 <dd className="mt-1 font-display text-lg font-semibold text-pine-900">
-                  {formatPrice(booking.total_fcfa)}
+                  {formatPrice(view.total_fcfa)}
                 </dd>
               </div>
             </div>

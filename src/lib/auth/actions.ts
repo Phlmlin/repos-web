@@ -32,19 +32,19 @@ export async function signUp(
     return { error: "Inscription impossible : " + error.message };
   }
 
-  // Crée le profil applicatif (rôles, fidélité, parrainage)
-  if (data.user) {
+  // Crée le profil applicatif (rôles, fidélité, parrainage).
+  // Si le trigger SQL handle_new_user est installé, le profil existe déjà
+  // (conflit ignoré). Sans session (confirmation email requise), le trigger
+  // s'en charge seul.
+  if (data.user && data.session) {
     const { error: pErr } = await supabase.from("profiles").insert({
       id: data.user.id,
       full_name: fullName,
       role,
       referral_code: "REPOS-" + data.user.id.slice(0, 8).toUpperCase(),
     });
-    if (pErr) {
-      // Le trigger SQL peut déjà l'avoir créé : on ignore le conflit.
-      if (!pErr.message.includes("duplicate")) {
-        return { error: "Compte créé mais profil incomplet : " + pErr.message };
-      }
+    if (pErr && !pErr.message.includes("duplicate")) {
+      return { error: "Compte créé mais profil incomplet : " + pErr.message };
     }
   }
 
