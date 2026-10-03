@@ -1,14 +1,35 @@
 "use client";
 
 import Link from "next/link";
+import {
+  BedDouble,
+  Building2,
+  CalendarDays,
+  Inbox,
+  LayoutDashboard,
+  Star,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState } from "react";
 
 export interface DashNavItem {
   href: string;
   label: string;
-  Icon: ComponentType<{ className?: string }>;
+  /** Nom d'icone : les composants (fonctions) ne peuvent pas transiter vers le client. */
+  icon: string;
 }
+
+const ICONS: Record<string, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  inbox: Inbox,
+  users: Users,
+  bed: BedDouble,
+  calendar: CalendarDays,
+  star: Star,
+  building: Building2,
+};
 
 const SECTION_ROOTS = ["/tableau-de-bord", "/admin", "/compte"];
 
@@ -37,20 +58,22 @@ export function DashboardNav({
     return () => window.removeEventListener("hashchange", update);
   }, []);
 
+  const onClick = (href: string) => {
+    const [, h] = href.split("#");
+    setHash(h != null ? `#${h}` : "");
+  };
+
   if (orientation === "horizontal") {
     return (
       <nav className="flex gap-2 overflow-x-auto px-4 py-3" aria-label="Navigation">
-        {items.map(({ href, label, Icon }) => {
+        {items.map(({ href, label, icon }) => {
+          const Icon = ICONS[icon] ?? LayoutDashboard;
           const active = isActive(pathname, hash, href);
           return (
             <Link
               key={href}
               href={href}
-              onClick={() => {
-                const [, h] = href.split("#");
-                if (h != null) setHash(`#${h}`);
-                else setHash("");
-              }}
+              onClick={() => onClick(href)}
               aria-current={active ? "page" : undefined}
               className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
                 active
@@ -69,17 +92,14 @@ export function DashboardNav({
 
   return (
     <nav className="flex flex-col gap-1 px-3" aria-label="Navigation">
-      {items.map(({ href, label, Icon }) => {
+      {items.map(({ href, label, icon }) => {
+        const Icon = ICONS[icon] ?? LayoutDashboard;
         const active = isActive(pathname, hash, href);
         return (
           <Link
             key={href}
             href={href}
-            onClick={() => {
-              const [, h] = href.split("#");
-              if (h != null) setHash(`#${h}`);
-              else setHash("");
-            }}
+            onClick={() => onClick(href)}
             aria-current={active ? "page" : undefined}
             className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition ${
               active

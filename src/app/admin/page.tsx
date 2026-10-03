@@ -4,7 +4,6 @@ import {
   CalendarDays,
   Flag,
   Inbox,
-  LayoutDashboard,
   PieChart,
   ShieldCheck,
   Users,
@@ -26,23 +25,6 @@ import {
 } from "./moderation-buttons";
 
 export default async function AdminPage() {
-  try {
-    return await AdminContent();
-  } catch (e) {
-    return (
-      <div className="mx-auto max-w-2xl p-10">
-        <h1 className="font-display text-2xl font-semibold text-clay-600">
-          Diagnostic admin
-        </h1>
-        <pre className="mt-4 overflow-auto rounded-2xl bg-pine-950 p-6 text-xs text-paper">
-          {String(e instanceof Error ? e.stack ?? e.message : e)}
-        </pre>
-      </div>
-    );
-  }
-}
-
-async function AdminContent() {
   const ctx = await requireAdmin();
   const sb = ctx.supabase;
 
@@ -115,9 +97,9 @@ async function AdminContent() {
       userName={ctx.fullName ?? "Admin"}
       userEmail={ctx.email ?? undefined}
       nav={[
-        { href: "/admin", label: "Vue d'ensemble", Icon: LayoutDashboard },
-        { href: "/admin#a-traiter", label: "À traiter", Icon: Inbox },
-        { href: "/admin#utilisateurs", label: "Utilisateurs", Icon: Users },
+        { href: "/admin", label: "Vue d'ensemble", icon: "dashboard" },
+        { href: "/admin#a-traiter", label: "À traiter", icon: "inbox" },
+        { href: "/admin#utilisateurs", label: "Utilisateurs", icon: "users" },
       ]}
     >
       <div id="top">

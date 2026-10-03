@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, LayoutDashboard, BedDouble, MapPin, Ticket, UserRound } from "lucide-react";
+import { CalendarDays, MapPin, Ticket, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { SLOT_LABELS, formatPrice, type SlotType } from "@/lib/repos";
@@ -56,8 +56,8 @@ export default async function ComptePage() {
       userName={profile?.full_name ?? user.email ?? "Client"}
       userEmail={user.email ?? undefined}
       nav={[
-        { href: "/compte", label: "Tableau de bord", Icon: LayoutDashboard },
-        { href: "/catalogue", label: "Catalogue", Icon: BedDouble },
+        { href: "/compte", label: "Tableau de bord", icon: "dashboard" },
+        { href: "/catalogue", label: "Catalogue", icon: "bed" },
       ]}
     >
       <div>
