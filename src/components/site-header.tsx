@@ -14,13 +14,13 @@ export function SiteHeader() {
           </span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium text-ink-soft md:flex">
-          <Link href="#etablissements" className="transition hover:text-pine-800">
+          <Link href="/catalogue" className="transition hover:text-pine-800">
             Établissements
           </Link>
-          <Link href="#comment-ca-marche" className="transition hover:text-pine-800">
+          <Link href="/#comment-ca-marche" className="transition hover:text-pine-800">
             Comment ça marche
           </Link>
-          <Link href="#tenanciers" className="transition hover:text-pine-800">
+          <Link href="/#tenanciers" className="transition hover:text-pine-800">
             Tenanciers
           </Link>
         </nav>

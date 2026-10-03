@@ -82,7 +82,8 @@ export default function Home() {
             {/* Barre de recherche */}
             <form
               className="mt-10 flex flex-col gap-3 rounded-2xl border border-line bg-white p-3 shadow-[0_20px_50px_-20px_rgba(20,53,36,0.25)] sm:flex-row sm:items-center sm:rounded-full sm:py-2 sm:pl-6 sm:pr-2"
-              action="/recherche"
+              action="/catalogue"
+              method="get"
             >
               <label className="flex flex-1 items-center gap-3 px-3 py-2">
                 <Search className="size-5 shrink-0 text-ink-faint" />
