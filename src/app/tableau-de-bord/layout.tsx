@@ -1,7 +1,6 @@
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { Building2, CalendarDays, LayoutDashboard, Star } from "lucide-react";
 import { requireTenancier } from "@/lib/auth/roles";
-import { SidebarNav } from "./sidebar-nav";
+import { DashboardShell } from "@/components/dashboard/shell";
 
 export default async function DashboardLayout({
   children,
@@ -11,24 +10,18 @@ export default async function DashboardLayout({
   const ctx = await requireTenancier();
 
   return (
-    <>
-      <SiteHeader />
-      <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-pine-700">
-          Espace tenancier
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-pine-950">
-          Bonjour, {ctx.fullName ?? "tenancier"}
-        </h1>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[240px_1fr]">
-          <aside>
-            <SidebarNav />
-          </aside>
-          <div className="min-w-0">{children}</div>
-        </div>
-      </div>
-      <SiteFooter />
-    </>
+    <DashboardShell
+      role="tenancier"
+      userName={ctx.fullName ?? "Tenancier"}
+      userEmail={ctx.email ?? undefined}
+      nav={[
+        { href: "/tableau-de-bord", label: "Vue d'ensemble", Icon: LayoutDashboard },
+        { href: "/tableau-de-bord/reservations", label: "Réservations", Icon: CalendarDays },
+        { href: "/tableau-de-bord/avis", label: "Avis", Icon: Star },
+        { href: "/tableau-de-bord/etablissement", label: "Mon établissement", Icon: Building2 },
+      ]}
+    >
+      {children}
+    </DashboardShell>
   );
 }

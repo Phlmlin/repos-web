@@ -1,11 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, LogOut, MapPin, Ticket, UserRound } from "lucide-react";
+import { CalendarDays, LayoutDashboard, BedDouble, MapPin, Ticket, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/lib/auth/actions";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { DashboardShell } from "@/components/dashboard/shell";
 import { SLOT_LABELS, formatPrice, type SlotType } from "@/lib/repos";
 import { CancelButton } from "./cancel-button";
 
@@ -53,13 +51,20 @@ export default async function ComptePage() {
   const past = (bookings ?? []).filter((b) => !upcoming.includes(b));
 
   return (
-    <>
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6">
+    <DashboardShell
+      role="client"
+      userName={profile?.full_name ?? user.email ?? "Client"}
+      userEmail={user.email ?? undefined}
+      nav={[
+        { href: "/compte", label: "Tableau de bord", Icon: LayoutDashboard },
+        { href: "/catalogue", label: "Catalogue", Icon: BedDouble },
+      ]}
+    >
+      <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-pine-700">
           Mon compte
         </p>
-        <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-pine-950">
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-pine-950 sm:text-4xl">
           Bonjour, {profile?.full_name ?? user.email}
         </h1>
 
@@ -111,15 +116,14 @@ export default async function ComptePage() {
                 Mon tableau de bord
               </Link>
             )}
-            <form action={signOut} className="mt-4">
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-line px-6 py-3 text-sm font-semibold text-ink transition hover:border-clay-500 hover:text-clay-600"
+            {profile?.role === "admin" && (
+              <Link
+                href="/admin"
+                className="mt-6 block rounded-full bg-pine-800 px-6 py-3 text-center text-sm font-semibold text-paper transition hover:bg-pine-900"
               >
-                <LogOut className="size-4" />
-                Se déconnecter
-              </button>
-            </form>
+                Administration
+              </Link>
+            )}
           </div>
 
           {/* Réservations */}
@@ -166,9 +170,8 @@ export default async function ComptePage() {
             )}
           </div>
         </div>
-      </main>
-      <SiteFooter />
-    </>
+      </div>
+    </DashboardShell>
   );
 }
 

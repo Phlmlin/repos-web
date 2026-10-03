@@ -26,10 +26,16 @@ export async function signUp(
     options: { data: { full_name: fullName, role } },
   });
   if (error) {
-    if (error.message.includes("already registered")) {
+    if (error.message.toLowerCase().includes("already registered")) {
       return { error: "Un compte existe déjà avec cet email. Connectez-vous." };
     }
     return { error: "Inscription impossible : " + error.message };
+  }
+
+  // Email déjà enregistré : Supabase renvoie un faux succès (sans erreur)
+  // pour éviter l'énumération des comptes — on le détecte via identities vide.
+  if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
+    return { error: "Un compte existe déjà avec cet email. Connectez-vous." };
   }
 
   // Crée le profil applicatif (rôles, fidélité, parrainage).

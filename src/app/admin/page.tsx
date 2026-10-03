@@ -4,14 +4,14 @@ import {
   CalendarDays,
   Flag,
   Inbox,
+  LayoutDashboard,
   PieChart,
   ShieldCheck,
   Users,
   Wallet,
 } from "lucide-react";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
 import { requireAdmin } from "@/lib/auth/roles";
+import { DashboardShell } from "@/components/dashboard/shell";
 import {
   SLOT_LABELS,
   TYPE_LABELS,
@@ -93,13 +93,21 @@ export default async function AdminPage() {
   ];
 
   return (
-    <>
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+    <DashboardShell
+      role="admin"
+      userName={ctx.fullName ?? "Admin"}
+      userEmail={ctx.email ?? undefined}
+      nav={[
+        { href: "/admin", label: "Vue d'ensemble", Icon: LayoutDashboard },
+        { href: "/admin#a-traiter", label: "À traiter", Icon: Inbox },
+        { href: "/admin#utilisateurs", label: "Utilisateurs", Icon: Users },
+      ]}
+    >
+      <div id="top">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-pine-700">
           <ShieldCheck className="size-4" /> Administration
         </p>
-        <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-pine-950">
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-pine-950 sm:text-4xl">
           Pilotage de la plateforme
         </h1>
         <p className="mt-2 text-[15px] text-ink-soft">
@@ -121,7 +129,7 @@ export default async function AdminPage() {
         </div>
 
         {/* À traiter */}
-        <h2 className="mt-10 flex items-center gap-2 font-display text-2xl font-semibold text-pine-950">
+        <h2 id="a-traiter" className="mt-10 flex scroll-mt-24 items-center gap-2 font-display text-2xl font-semibold text-pine-950">
           <Inbox className="size-5 text-pine-700" />
           À traiter
         </h2>
@@ -246,7 +254,7 @@ export default async function AdminPage() {
         )}
 
         {/* Utilisateurs & rôles */}
-        <h2 className="mt-10 flex items-center gap-2 font-display text-2xl font-semibold text-pine-950">
+        <h2 id="utilisateurs" className="mt-10 flex scroll-mt-24 items-center gap-2 font-display text-2xl font-semibold text-pine-950">
           <Users className="size-5 text-pine-700" />
           Utilisateurs & rôles
         </h2>
@@ -334,8 +342,7 @@ export default async function AdminPage() {
         >
           ← Retour à mon compte
         </Link>
-      </main>
-      <SiteFooter />
-    </>
+      </div>
+    </DashboardShell>
   );
 }
